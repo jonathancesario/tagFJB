@@ -15,6 +15,7 @@ public class Database
 	HashMap<String,Tag> tag;
 	Set<String> keys;
 	String today, oldestDay;
+	Chart chart;
 	
 	public Database(HashMap<String,Tag> tag, String today) throws Exception {
 		Class.forName("org.hsqldb.jdbcDriver");
@@ -23,6 +24,7 @@ public class Database
         this.tag = tag;
         this.today = today;
         keys = tag.keySet();
+        chart = new Chart("Comparison Chart");
 	}
 	
 	public void getOldestDay() throws Exception {
@@ -64,11 +66,18 @@ public class Database
 			if(rs.next()){
 				maxProb = rs.getDouble("maxProb");
 			}
-			rs = stat.executeQuery("SELECT counter FROM HISTORY WHERE date = '"+today+"' and tag = '"+key+"'");
-			double counter = 1;
-			if(rs.next()){
-				counter = rs.getInt("counter");
+			rs = stat.executeQuery("SELECT date, counter FROM HISTORY where tag = '"+key+"'");
+			double counter = 1; // counter tag for today
+			ArrayList<History> history = new ArrayList<History>(); // history for chart
+			while(rs.next()){
+				String date = rs.getString("date");
+				int counterTag = rs.getInt("counter");
+				if(date.equals(today)){
+					counter = counterTag;
+				}
+				history.add(new History(date,counterTag));
 			}
+			chart.addDataset(new Point(key,history)); // add every tag to chart
 			double prob = counter/total;
 			stat.execute("UPDATE HISTORY SET probability = "+prob+" WHERE date = '"+today+"' and tag = '"+key+"'"); // probability
 			if(maxProb != 0){
@@ -79,9 +88,13 @@ public class Database
 		//stat.execute("DELETE FROM HISTORY WHERE date = '"+oldestDay+"'"); // delete oldest day
 	}
 	
+	/**
+	 * Get coordinates of Top Ten Tag
+	 * @return list of Top Ten Tag
+	 */
 	public ArrayList<Point> getPoint() throws Exception {
 		ArrayList<Point> result = new ArrayList<Point>();
-		rs = stat.executeQuery("SELECT * FROM RATING ORDER BY score desc LIMIT 5");
+		rs = stat.executeQuery("SELECT * FROM RATING ORDER BY score desc LIMIT 10");
 		System.out.println("Hot Tag FJB");
 		int counter = 1;
 		while(rs.next()){

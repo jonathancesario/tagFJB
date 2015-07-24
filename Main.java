@@ -6,8 +6,6 @@ import java.util.HashMap;
 import java.util.Set;
 
 import org.jfree.ui.RefineryUtilities;
-import org.jfree.util.Log;
-import org.jfree.util.PrintStreamLogTarget;
 
 
 public class Main
@@ -52,17 +50,22 @@ public class Main
 		database.getOldestDay();
 		database.insert();
 		database.calculate();
-		ArrayList<Point> point = database.getPoint(); // history tiap tag dengan date dan counter
+		ArrayList<Point> point = database.getPoint(); // top ten tag for chart
 		database.close();
 		
 		dataReader.close();
 		inputReader.close();
 		
 		/* chart */
-		Log.getInstance().addTarget(new PrintStreamLogTarget());
-		Chart chart = new Chart("Comparison Chart", point);
-        chart.pack();
-        RefineryUtilities.centerFrameOnScreen(chart);
-        chart.setVisible(true);
+		Chart topChart = new Chart("Top Ten", point);
+		topChart.visualize(true, 350);
+		topChart.pack();
+		RefineryUtilities.centerFrameOnScreen(topChart);
+        topChart.setVisible(true);
+        Chart allChart = database.chart;
+        allChart.visualize(false, 650);
+        allChart.pack();
+        RefineryUtilities.centerFrameOnScreen(allChart);
+        allChart.setVisible(true);
 	}
 }
