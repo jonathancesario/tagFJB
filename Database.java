@@ -1,7 +1,10 @@
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
@@ -66,9 +69,10 @@ public class Database
 			if(rs.next()){
 				maxProb = rs.getDouble("maxProb");
 			}
-			rs = stat.executeQuery("SELECT date, counter FROM HISTORY where tag = '"+key+"'");
+			rs = stat.executeQuery("SELECT date, counter, probability FROM HISTORY where tag = '"+key+"'");
 			double counter = 1; // counter tag for today
 			ArrayList<History> history = new ArrayList<History>(); // history for chart
+			/* history for a week */
 			while(rs.next()){
 				String date = rs.getString("date");
 				int counterTag = rs.getInt("counter");
@@ -84,8 +88,8 @@ public class Database
 				double score = prob*Math.log(prob/maxProb);
 				stat.execute("UPDATE RATING SET score = "+score+" WHERE tag = '"+key+"'"); // KL divergence
 			}
-		} System.out.println("DELETE FROM HISTORY WHERE date = '"+oldestDay+"'\n");
-		//stat.execute("DELETE FROM HISTORY WHERE date = '"+oldestDay+"'"); // delete oldest day
+		}
+		stat.execute("DELETE FROM HISTORY WHERE date = '"+oldestDay+"'"); // delete oldest day
 	}
 	
 	/**
@@ -93,20 +97,37 @@ public class Database
 	 * @return list of Top Ten Tag
 	 */
 	public ArrayList<Point> getPoint() throws Exception {
+		PrintWriter pw = new PrintWriter(new FileWriter(
+				"C:\\Users\\gdplabs.intern\\Desktop\\TrendFJB\\prediction\\" + today + ".txt"));
 		ArrayList<Point> result = new ArrayList<Point>();
 		rs = stat.executeQuery("SELECT * FROM RATING ORDER BY score desc LIMIT 10");
 		System.out.println("Hot Tag FJB");
 		int counter = 1;
+		DecimalFormat df = new DecimalFormat("#0.0000000000"); // format 10 digits decimal
 		while(rs.next()){
-			System.out.println(counter+". "+rs.getString("tag")+","+rs.getString("forum")+","+rs.getDouble("score"));
-			ResultSet temp = stat.executeQuery("SELECT date,counter FROM HISTORY where tag = '"+rs.getString("tag")+"'");
+			String tag = rs.getString("tag");
+			String forum = rs.getString("forum");
+			double score = rs.getDouble("score");
+			System.out.print(counter+". "+tag+" - "+forum+" - "+score);
+			pw.print(counter+". "+tag+" - "+forum+" - "+score);
+			ResultSet temp = stat.executeQuery("SELECT date,counter,probability FROM HISTORY where tag = '"+rs.getString("tag")+"'");
 			ArrayList<History> h = new ArrayList<History>();
 			while(temp.next()){
 				h.add(new History(temp.getString("date"),temp.getInt("counter")));
 			}
 			result.add(new Point(rs.getString("tag"),h));
 			counter++;
+			/* comparison probability */
+			ResultSet a = stat.executeQuery("SELECT MAX(probability) as maxProb FROM HISTORY WHERE tag = '" + tag
+					+ "' and date < '" + today + "'");
+			if(a.next()){
+				score = a.getDouble("maxProb");
+			}
+			String format = df.format(score);
+			System.out.println("; maxProb=" + format);
+			pw.println("; maxProb=" + format);
 		}
+		pw.close();
 		return result;
 	}
 	

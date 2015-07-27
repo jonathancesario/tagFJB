@@ -14,11 +14,12 @@ public class Main
         BufferedReader inputReader = new BufferedReader(new InputStreamReader(System.in));
         System.out.println("Please insert the data location (csv format)");
         String location = inputReader.readLine();
+        String[] test = location.split("\\\\");
+        String date = test[test.length-1].substring(0, 10);
         
 		BufferedReader dataReader = new BufferedReader(new FileReader(location));
 		Separator separator = new Separator();
-		String temp = dataReader.readLine(); // pass the first row (field)
-		temp = dataReader.readLine();
+		String temp = dataReader.readLine();
 		
 		/* save list of tag */
 		HashMap<String,Tag> tag = new HashMap<String,Tag>(); // collection of tag
@@ -41,12 +42,8 @@ public class Main
 			temp = dataReader.readLine();
 		}
 		
-		/* today and oldest day */
-		TheDate theDate = new TheDate();
-		String today = theDate.getToday();
-		
 		/* process new data */
-		Database database = new Database(tag,today);
+		Database database = new Database(tag,date);
 		database.getOldestDay();
 		database.insert();
 		database.calculate();
@@ -57,13 +54,12 @@ public class Main
 		inputReader.close();
 		
 		/* chart */
-		Chart topChart = new Chart("Top Ten", point);
-		topChart.visualize(true, 350);
+		Chart topChart = new Chart("Top Ten", point, date);
 		topChart.pack();
 		RefineryUtilities.centerFrameOnScreen(topChart);
         topChart.setVisible(true);
         Chart allChart = database.chart;
-        allChart.visualize(false, 650);
+        allChart.visualize(false, 650, date);
         allChart.pack();
         RefineryUtilities.centerFrameOnScreen(allChart);
         allChart.setVisible(true);
