@@ -54,10 +54,10 @@ public class Chart extends ApplicationFrame
         chartPanel.setPreferredSize(new java.awt.Dimension(500, width));
         chartPanel.setMouseZoomable(true, false);
         setContentPane(chartPanel);
-        if(legend){
+        if(legend){ // topTen
         	ChartUtilities.saveChartAsPNG(new File
-        			("C:\\Users\\gdplabs.intern\\Desktop\\TrendFJB\\prediction\\"+date+"topTenCounter.png"), chart, 500, width);
-        } else {
+        			("C:\\Users\\gdplabs.intern\\Desktop\\TrendFJB\\prediction\\"+date+"topTen.png"), chart, 500, width);
+        } else { // all
         	ChartUtilities.saveChartAsPNG(new File
         			("C:\\Users\\gdplabs.intern\\Desktop\\TrendFJB\\prediction\\"+date+"all.png"), chart, 500, width);
         }
@@ -86,6 +86,9 @@ public class Chart extends ApplicationFrame
         return chart;
     }
     
+    /**
+     * Add TimeSeries to dataset
+     */
     public void addDataset(Point point) {
     	TimeSeries tagCounter = new TimeSeries(point.tag);
     	tagCounter = insertHistory(tagCounter,point,true);

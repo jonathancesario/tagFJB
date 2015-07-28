@@ -57,19 +57,21 @@ public class Database
 	 * Calculate probability and score (KL divergence)
 	 */
 	public void calculate() throws Exception {
-		rs = stat.executeQuery("SELECT SUM(counter) as total FROM HISTORY WHERE date = '"+today+"'");
+		rs = stat.executeQuery("SELECT SUM(counter) as total FROM HISTORY WHERE date = '"+ today +"'");
 		double total = 1;
 		if(rs.next()){
 			total = rs.getInt("total");
 		}
 		rs = stat.executeQuery("UPDATE RATING SET score = score/2.0");
 		for(String key: keys){
+			/* max probability last 7 days */
 			double maxProb = 1;
-			rs = stat.executeQuery("SELECT MAX(probability) as maxProb FROM HISTORY WHERE tag = '"+key+"'");
+			rs = stat.executeQuery("SELECT MAX(probability) as maxProb FROM HISTORY WHERE tag = '"+ key +"'");
 			if(rs.next()){
 				maxProb = rs.getDouble("maxProb");
 			}
-			rs = stat.executeQuery("SELECT date, counter, probability FROM HISTORY where tag = '"+key+"'");
+			
+			rs = stat.executeQuery("SELECT date, counter, probability FROM HISTORY where tag = '"+ key +"'");
 			double counter = 1; // counter tag for today
 			ArrayList<History> history = new ArrayList<History>(); // history for chart
 			/* history for a week */
@@ -82,11 +84,14 @@ public class Database
 				history.add(new History(date,counterTag));
 			}
 			chart.addDataset(new Point(key,history)); // add every tag to chart
+			/* probability */
 			double prob = counter/total;
-			stat.execute("UPDATE HISTORY SET probability = "+prob+" WHERE date = '"+today+"' and tag = '"+key+"'"); // probability
+			stat.execute("UPDATE HISTORY SET probability = "+ prob
+					+ " WHERE date = '" + today + "' and tag = '" + key + "'");
+			/* KL divergence */
 			if(maxProb != 0){
 				double score = prob*Math.log(prob/maxProb);
-				stat.execute("UPDATE RATING SET score = "+score+" WHERE tag = '"+key+"'"); // KL divergence
+				stat.execute("UPDATE RATING SET score = "+score+" WHERE tag = '"+key+"'");
 			}
 		}
 		stat.execute("DELETE FROM HISTORY WHERE date = '"+oldestDay+"'"); // delete oldest day
@@ -96,36 +101,38 @@ public class Database
 	 * Get coordinates of Top Ten Tag
 	 * @return list of Top Ten Tag
 	 */
-	public ArrayList<Point> getPoint() throws Exception {
+	public ArrayList<Point> getTopTen() throws Exception {
 		PrintWriter pw = new PrintWriter(new FileWriter(
 				"C:\\Users\\gdplabs.intern\\Desktop\\TrendFJB\\prediction\\" + today + ".txt"));
+		pw.println("Hot Tag FJB");
 		ArrayList<Point> result = new ArrayList<Point>();
-		rs = stat.executeQuery("SELECT * FROM RATING ORDER BY score desc LIMIT 10");
-		System.out.println("Hot Tag FJB");
+		rs = stat.executeQuery("SELECT tag,forum,probability,score FROM RATING r, HISTORY h"
+				+ " WHERE h.tag = r.tag and date = '" + today + "' ORDER BY score desc limit 10");
 		int counter = 1;
 		DecimalFormat df = new DecimalFormat("#0.0000000000"); // format 10 digits decimal
 		while(rs.next()){
 			String tag = rs.getString("tag");
 			String forum = rs.getString("forum");
-			double score = rs.getDouble("score");
-			System.out.print(counter+". "+tag+" - "+forum+" - "+score);
-			pw.print(counter+". "+tag+" - "+forum+" - "+score);
+			double prob = rs.getDouble("probability");
+			System.out.print(counter+". "+tag+" - "+forum+" - "+prob);
+			pw.print(counter+". "+tag+" - "+forum+" - "+prob);
+			/* add coordinate for chart */
 			ResultSet temp = stat.executeQuery("SELECT date,counter,probability FROM HISTORY where tag = '"+rs.getString("tag")+"'");
 			ArrayList<History> h = new ArrayList<History>();
 			while(temp.next()){
 				h.add(new History(temp.getString("date"),temp.getInt("counter")));
 			}
 			result.add(new Point(rs.getString("tag"),h));
-			counter++;
 			/* comparison probability */
-			ResultSet a = stat.executeQuery("SELECT MAX(probability) as maxProb FROM HISTORY WHERE tag = '" + tag
+			temp = stat.executeQuery("SELECT MAX(probability) as maxProb FROM HISTORY WHERE tag = '" + tag
 					+ "' and date < '" + today + "'");
-			if(a.next()){
-				score = a.getDouble("maxProb");
+			if(temp.next()){
+				prob = temp.getDouble("maxProb");
 			}
-			String format = df.format(score);
+			String format = df.format(prob);
 			System.out.println("; maxProb=" + format);
 			pw.println("; maxProb=" + format);
+			counter++;
 		}
 		pw.close();
 		return result;

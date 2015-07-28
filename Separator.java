@@ -26,12 +26,13 @@ public class Separator
 		this.s = s;
 	}
 	
+	/**
+	 * Make a list of tag from one row
+	 */
 	public Set<String> separate() {
 		Set<String> result = new TreeSet<String>();
 		StringTokenizer token = new StringTokenizer(s," !@#$%^&*()-_=+|\\\'\":;[]{}<>,.?/~`");
 		while (token.hasMoreTokens()){
-			//String temp = token.nextToken().toLowerCase().trim().replaceAll(" +", " ");
-			//if (temp.length() < 4) continue;
 			String temp = token.nextToken().toLowerCase();
 			if(!checkNumber(temp)){
 				if(!forbidden.contains(temp)){

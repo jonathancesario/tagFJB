@@ -47,7 +47,7 @@ public class Main
 		database.getOldestDay();
 		database.insert();
 		database.calculate();
-		ArrayList<Point> point = database.getPoint(); // top ten tag for chart
+		ArrayList<Point> point = database.getTopTen(); // top ten tag for chart
 		database.close();
 		
 		dataReader.close();

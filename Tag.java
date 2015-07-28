@@ -1,3 +1,6 @@
+/**
+ * For Separator
+ */
 public class Tag
 {
 	String forum;

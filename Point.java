@@ -1,6 +1,8 @@
 import java.util.ArrayList;
 
-
+/**
+ * For chart
+ */
 public class Point
 {
 	String tag;
