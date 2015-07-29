@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 
-import org.jfree.ui.RefineryUtilities;
-
 
 public class Main
 {
@@ -48,20 +46,18 @@ public class Main
 		database.insert();
 		database.calculate();
 		ArrayList<Point> point = database.getTopTen(); // top ten tag for chart
-		database.close();
 		
+		/* export data chart */
+		ChartWriter chart = new ChartWriter(point,date);
+		chart.exportData();
+		
+		/* commit */
+		System.out.println("Commit? Y/N");
+		String commit = inputReader.readLine();
+		database.commit(commit);
+		
+		database.close();
 		dataReader.close();
 		inputReader.close();
-		
-		/* chart */
-		Chart topChart = new Chart("Top Ten", point, date);
-		topChart.pack();
-		RefineryUtilities.centerFrameOnScreen(topChart);
-        topChart.setVisible(true);
-        Chart allChart = database.chart;
-        allChart.visualize(false, 650, date);
-        allChart.pack();
-        RefineryUtilities.centerFrameOnScreen(allChart);
-        allChart.setVisible(true);
 	}
 }
