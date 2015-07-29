@@ -30,14 +30,14 @@ public class ChartWriter
 	}
 	
 	public void exportData() {
-    	String[] date = new String[8];
-    	date[7] = today;
+    	String[] date = new String[4];
+    	date[3] = today;
     	DateUtility dateUtility = new DateUtility(today);
-    	for(int i = 6; i >= 0; i--){
+    	for(int i = 2; i >= 0; i--){
     		date[i] = dateUtility.prevDay(1).toString();
     	}
     	pw.print(date[0]);
-    	for(int i = 1; i < 8; i++){
+    	for(int i = 1; i < 4; i++){
     		pw.print("," + date[i]);
     	}
     	pw.println();

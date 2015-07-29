@@ -92,8 +92,13 @@ public class Database
 					+ " WHERE date = '" + today + "' and tag = '" + key + "'");
 			
 			/* KL divergence */
+			rs = stat.executeQuery("SELECT score FROM RATING where tag = '" + key + "'");
+			double score = 0;
+			if(rs.next()){
+				score = rs.getDouble("score");
+			}
 			if(maxProb != 0){
-				double score = prob*Math.log(prob/maxProb);
+				score += prob*Math.log(prob/maxProb);
 				stat.execute("UPDATE RATING SET score = "+score+" WHERE tag = '"+key+"'");
 			}
 		}
@@ -108,17 +113,19 @@ public class Database
 		PrintWriter pw = new PrintWriter(new FileWriter(
 				"C:\\Users\\gdplabs.intern\\Desktop\\TrendFJB\\prediction\\" + today + ".txt"));
 		pw.println("Hot Tag FJB");
+		pw.println("tag - forum - score - prob; maxProb"); 
 		ArrayList<Point> result = new ArrayList<Point>();
 		rs = stat.executeQuery("SELECT tag,forum,probability,score FROM RATING r, HISTORY h"
 				+ " WHERE h.tag = r.tag and date = '" + today + "' ORDER BY score desc limit 10");
 		int counter = 1;
-		DecimalFormat df = new DecimalFormat("#0.0000000000"); // format 10 digits decimal
+		DecimalFormat df = new DecimalFormat("#0.0000000000000"); // format 10 digits decimal
 		while(rs.next()){
 			String tag = rs.getString("tag");
 			String forum = rs.getString("forum");
 			double prob = rs.getDouble("probability");
-			System.out.print(counter+". "+tag+" - "+forum+" - "+prob);
-			pw.print(counter+". "+tag+" - "+forum+" - "+prob);
+			double score = rs.getDouble("score");
+			System.out.print(counter+ ". " + tag + " - " + forum + " - " + score + " - " + prob);
+			pw.print(counter+ ". " + tag + " - " + forum + " - " + score + " - " + prob);
 			
 			/* add coordinate for chart */
 			ResultSet temp = stat.executeQuery("SELECT date,counter FROM HISTORY"
@@ -142,7 +149,7 @@ public class Database
 		}
 		System.out.println();
 		pw.close();
-		stat.execute("DELETE FROM HISTORY WHERE date = '"+oldestDay+"'"); // delete oldest day
+		stat.execute("DELETE FROM HISTORY WHERE date = '" + oldestDay + "'"); // delete oldest day
 		return result;
 	}
 	
