@@ -18,16 +18,17 @@ public class Database
 	HashMap<String,Tag> tag;
 	Set<String> keys;
 	String today, oldestDay;
-	Chart chart;
+	ChartWriter chart;
 	
 	public Database(HashMap<String,Tag> tag, String today) throws Exception {
 		Class.forName("org.hsqldb.jdbcDriver");
         conn = DriverManager.getConnection("jdbc:hsqldb:hsql://localhost/xdb", "SA", "");
+        conn.setAutoCommit(false);
         stat = conn.createStatement();
         this.tag = tag;
         this.today = today;
         keys = tag.keySet();
-        chart = new Chart("Comparison Chart");
+        chart = new ChartWriter(today);
 	}
 	
 	public void getOldestDay() throws Exception {
@@ -83,11 +84,13 @@ public class Database
 				}
 				history.add(new History(date,counterTag));
 			}
-			chart.addDataset(new Point(key,history)); // add every tag to chart
+			chart.point.add(new Point(key,history)); // add every tag to chart
+			
 			/* probability */
 			double prob = counter/total;
 			stat.execute("UPDATE HISTORY SET probability = "+ prob
 					+ " WHERE date = '" + today + "' and tag = '" + key + "'");
+			
 			/* KL divergence */
 			if(maxProb != 0){
 				double score = prob*Math.log(prob/maxProb);
@@ -95,6 +98,7 @@ public class Database
 			}
 		}
 		stat.execute("DELETE FROM HISTORY WHERE date = '"+oldestDay+"'"); // delete oldest day
+		chart.exportData();
 	}
 	
 	/**
@@ -116,6 +120,7 @@ public class Database
 			double prob = rs.getDouble("probability");
 			System.out.print(counter+". "+tag+" - "+forum+" - "+prob);
 			pw.print(counter+". "+tag+" - "+forum+" - "+prob);
+			
 			/* add coordinate for chart */
 			ResultSet temp = stat.executeQuery("SELECT date,counter,probability FROM HISTORY where tag = '"+rs.getString("tag")+"'");
 			ArrayList<History> h = new ArrayList<History>();
@@ -123,6 +128,7 @@ public class Database
 				h.add(new History(temp.getString("date"),temp.getInt("counter")));
 			}
 			result.add(new Point(rs.getString("tag"),h));
+			
 			/* comparison probability */
 			temp = stat.executeQuery("SELECT MAX(probability) as maxProb FROM HISTORY WHERE tag = '" + tag
 					+ "' and date < '" + today + "'");
@@ -134,8 +140,17 @@ public class Database
 			pw.println("; maxProb=" + format);
 			counter++;
 		}
+		System.out.println();
 		pw.close();
 		return result;
+	}
+	
+	public void commit(String commit) throws Exception {
+		if(commit.equals("Y")){
+			conn.commit();
+		} else {
+			conn.rollback();
+		}
 	}
 	
 	public void close() throws Exception {
