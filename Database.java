@@ -97,7 +97,6 @@ public class Database
 				stat.execute("UPDATE RATING SET score = "+score+" WHERE tag = '"+key+"'");
 			}
 		}
-		stat.execute("DELETE FROM HISTORY WHERE date = '"+oldestDay+"'"); // delete oldest day
 		chart.exportData();
 	}
 	
@@ -122,7 +121,8 @@ public class Database
 			pw.print(counter+". "+tag+" - "+forum+" - "+prob);
 			
 			/* add coordinate for chart */
-			ResultSet temp = stat.executeQuery("SELECT date,counter,probability FROM HISTORY where tag = '"+rs.getString("tag")+"'");
+			ResultSet temp = stat.executeQuery("SELECT date,counter FROM HISTORY"
+					+ " WHERE tag = '"+ tag + "'");
 			ArrayList<History> h = new ArrayList<History>();
 			while(temp.next()){
 				h.add(new History(temp.getString("date"),temp.getInt("counter")));
@@ -142,6 +142,7 @@ public class Database
 		}
 		System.out.println();
 		pw.close();
+		stat.execute("DELETE FROM HISTORY WHERE date = '"+oldestDay+"'"); // delete oldest day
 		return result;
 	}
 	

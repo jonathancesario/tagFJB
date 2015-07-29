@@ -31,22 +31,16 @@ public class ChartWriter
 	
 	public void exportData() {
     	String[] date = new String[8];
-    	boolean done = false;
-    	for(int i = 0; i < point.size() && !done; i++){
-    		Point p = point.get(i);
-			if(p.history.size() == 8){ // tag appears every day
-				done = true;
-				for(int j = 0; j < p.history.size(); j++){
-					date[j] = p.history.get(j).date;
-					if(j == p.history.size()-1){
-						pw.print(date[j]);
-					} else {
-						pw.print(date[j] + ",");
-					}
-				}
-				pw.println();
-			}
-     	}
+    	date[7] = today;
+    	DateUtility dateUtility = new DateUtility(today);
+    	for(int i = 6; i >= 0; i--){
+    		date[i] = dateUtility.prevDay(1).toString();
+    	}
+    	pw.print(date[0]);
+    	for(int i = 1; i < 8; i++){
+    		pw.print("," + date[i]);
+    	}
+    	pw.println();
     	for(int i = 0; i < point.size(); i++) {
     		Point p = point.get(i);
     		int counter = 0;

@@ -51,6 +51,14 @@ public class Main
 		ChartWriter chart = new ChartWriter(point,date);
 		chart.exportData();
 		
+		/* generate chart */
+		Generator topTen = new Generator(true, 
+				"C:\\Users\\gdplabs.intern\\Desktop\\TrendFJB\\prediction\\" + date + "topTen.txt");
+		topTen.createChart();
+		Generator all = new Generator(false, 
+				"C:\\Users\\gdplabs.intern\\Desktop\\TrendFJB\\prediction\\" + date + "all.txt");
+		all.createChart();
+		
 		/* commit */
 		System.out.println("Commit? Y/N");
 		String commit = inputReader.readLine();
