@@ -23,4 +23,8 @@ class History
 		this.date = date;
 		this.counter = counter;
 	}
+	
+	public String toString() {
+		return date + "," + counter;
+	}
 }

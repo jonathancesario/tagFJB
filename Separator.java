@@ -11,9 +11,9 @@ public class Separator
 	String s;
 	Set<String> forbidden; //list of forbidden words that already define
 	
-	public Separator() throws IOException {
+	public Separator(String location) throws IOException {
 		forbidden = new TreeSet<String>();
-		BufferedReader inputReader = new BufferedReader(new FileReader("C:\\Users\\gdplabs.intern\\Desktop\\TrendFJB\\forbidden.txt"));
+		BufferedReader inputReader = new BufferedReader(new FileReader(location + "\\forbidden.txt"));
 		String temp = inputReader.readLine();
 		while(temp != null){
 			forbidden.add(temp);

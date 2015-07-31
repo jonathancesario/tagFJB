@@ -1,81 +1,183 @@
-import java.io.FileWriter;
-import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 
+public class Database {
+	private Connection conn;
+	private Statement stat;
+	private ResultSet rs;
+	private HashMap<String, Tag> tag;
+	private Set<String> keys;
+	private String today, oldestDay = null;
 
-public class Database
-{
-	Connection conn;
-	Statement stat;
-	ResultSet rs;
-	HashMap<String,Tag> tag;
-	Set<String> keys;
-	String today, oldestDay;
-	ChartWriter chart;
-	
-	public Database(HashMap<String,Tag> tag, String today) throws Exception {
+	private static final String HOST = "jdbc:hsqldb:hsql://localhost/xdb";
+	private static final String USER = "SA";
+	private static final String PASSWORD = "";
+	private static final Integer MAXIMUM_CHARACTERS = 20;
+
+	public static void migrate () throws Exception {
 		Class.forName("org.hsqldb.jdbcDriver");
-        conn = DriverManager.getConnection("jdbc:hsqldb:hsql://localhost/xdb", "SA", "");
-        conn.setAutoCommit(false);
-        stat = conn.createStatement();
-        this.tag = tag;
-        this.today = today;
-        keys = tag.keySet();
-        chart = new ChartWriter(today);
+		
+		Connection conn = DriverManager.getConnection(HOST, USER, PASSWORD);
+		
+		Statement stat = conn.createStatement();
+		
+		stat.executeQuery("DROP TABLE rating IF EXISTS CASCADE");
+		
+		stat.executeQuery("DROP TABLE history IF EXISTS CASCADE");
+		
+		stat.executeQuery("CREATE TABLE RATING( "
+									+ "tag varchar(50) primary key, "
+									+ "forum char(3) not null, "
+									+ "score double)");
+		
+		stat.executeQuery("CREATE TABLE HISTORY( "
+									+ "tag varchar(50) not null, "
+									+ "date date not null, "
+									+ "counter int, "
+									+ "probability double, "
+									+ "primary key(tag,date), "
+									+ "foreign key(tag) references rating(tag))"
+						);
 	}
 	
-	public void getOldestDay() throws Exception {
+	public Database(HashMap<String, Tag> tag, String today, Boolean init) throws Exception {
+		Class.forName("org.hsqldb.jdbcDriver");
+		conn = DriverManager.getConnection(HOST, USER, PASSWORD);
+
+		this.stat = conn.createStatement();
+		this.tag = tag;
+		this.today = today;
+		this.keys = tag.keySet();
+
+		conn.setAutoCommit(false);
+	}
+	
+	public int getTotalDate() throws Exception {
+		rs = stat.executeQuery("SELECT COUNT (DISTINCT date) as total FROM HISTORY");
+
+		return rs.next() ? rs.getInt("total") : 0;		
+	}
+	
+	public int getTotal() throws Exception {
+		rs = stat.executeQuery("SELECT SUM(counter) as total FROM HISTORY WHERE date = '" + today + "'");
+
+		return rs.next() ? rs.getInt("total") : 0;
+	}
+
+	public int getCounter(String key) throws Exception {
+		rs = stat.executeQuery("SELECT counter FROM HISTORY where tag = '"+ key + "'" + " and date = '" + today + "'");
+
+		return rs.next() ? rs.getInt("counter") : 0;
+	}
+
+	public double getMaxProb(String key) throws Exception {
+		rs = stat.executeQuery("SELECT MAX(probability) as maxProb FROM HISTORY WHERE tag = '" + key + "'");
+
+		return rs.next() ? rs.getDouble("maxProb") : 0;
+	}
+
+	/* KL Divergence */
+	public double getScore(String key) throws Exception {
+		rs = stat.executeQuery("SELECT score FROM RATING where tag = '" + key + "'");
+
+		return rs.next() ? rs.getDouble("score") : 0;
+	}
+
+	public void commit() throws Exception {
+		conn.commit();
+	}
+
+	public void rollback() throws Exception {
+		conn.rollback();
+	}
+
+	public void close() throws Exception {
+		stat.close();
+		conn.close();
+	}
+
+	public void markOldestDay() throws Exception {
 		rs = stat.executeQuery("SELECT MIN(date) as minDate FROM HISTORY");
-		if(rs.next()){
+		if (rs.next()) {
 			oldestDay = rs.getString("minDate");
 		}
 	}
-	
-	/**
-	 * Insert new data to HISTORY
-	 */
+
+	public void deleteOldestDay() throws Exception {
+		if (oldestDay != null) {
+			stat.execute("DELETE FROM HISTORY WHERE date = '" + oldestDay + "'");
+		}
+	}
+
+	/** Insert new data to HISTORY */
 	public void insert() throws Exception {
-		for(String key: keys){
-			if(key.length() < 25){ // ignore the symbols
+
+		for (String key : keys) { 
+			/* length filtering */
+			if (key.length() < MAXIMUM_CHARACTERS) { 	
 				Tag value = tag.get(key);
-				rs = stat.executeQuery("SELECT tag FROM RATING WHERE tag = '"+key+"'");
-				if(!rs.next()){
-					stat.execute("INSERT INTO RATING VALUES('"+key+"','"+value.forum+"',0)"); // if key isn't exist yet
+				
+				rs = stat.executeQuery("SELECT tag FROM RATING WHERE tag = '" + key + "'");
+				
+				if (!rs.next()) {
+					/* if key isn't exist yet */
+					stat.execute("INSERT INTO RATING VALUES('" + key + "','" + value.forum + "',0)");
 				}
-				stat.execute("INSERT INTO HISTORY VALUES('"+key+"','"+today+"',"+value.counter+",0)"); // if key already exists
+				stat.execute("INSERT INTO HISTORY VALUES('" + key + "','" + today + "'," + value.counter + ",0)"); // if key already exist
 			}
 		}
 	}
-	
-	/**
-	 * Calculate probability and score (KL divergence)
-	 */
-	public void calculate() throws Exception {
-		rs = stat.executeQuery("SELECT SUM(counter) as total FROM HISTORY WHERE date = '"+ today +"'");
-		double total = 1;
-		if(rs.next()){
-			total = rs.getInt("total");
-		}
+
+	/** Calculate and update score (KL divergence) */
+	public void updateScores() throws Exception {
+		
+		int total = getTotal();
+
+		/* decay the score exponentially */
 		rs = stat.executeQuery("UPDATE RATING SET score = score/2.0");
-		for(String key: keys){
-			/* max probability last 7 days */
-			double maxProb = 1;
-			rs = stat.executeQuery("SELECT MAX(probability) as maxProb FROM HISTORY WHERE tag = '"+ key +"'");
-			if(rs.next()){
-				maxProb = rs.getDouble("maxProb");
+
+		for (String key : keys) {
+			rs = stat.executeQuery("SELECT date, counter, probability FROM HISTORY where tag = '"+ key + "'");
+
+			int counter    = getCounter(key);
+			double maxProb = getMaxProb(key);
+			double score   = getScore(key);
+
+			/* count the probability */
+			double prob = (double) counter / total;
+
+			/* update KL Divergence */
+			if (maxProb != 0) {
+				score += prob * Math.log(prob / maxProb);
+
+				stat.execute("UPDATE RATING SET score = " + score + " WHERE tag = '" + key + "'");
 			}
+		}
+	}
+
+	/** Calculate and update probabilities */
+	public ArrayList<Point> updateProbabilities() throws Exception {
+
+		ArrayList<Point> result = new ArrayList<Point>();
+		
+		int total = getTotal();
+
+		/* counter tag for today */
+		int counter = 1;
+
+		for (String key : keys) {
+			counter = getCounter(key);
 			
+			
+			/* fill Array of Points */
 			rs = stat.executeQuery("SELECT date, counter, probability FROM HISTORY where tag = '"+ key +"'");
-			double counter = 1; // counter tag for today
 			ArrayList<History> history = new ArrayList<History>(); // history for chart
-			/* history for a week */
+			
 			while(rs.next()){
 				String date = rs.getString("date");
 				int counterTag = rs.getInt("counter");
@@ -84,85 +186,74 @@ public class Database
 				}
 				history.add(new History(date,counterTag));
 			}
-			chart.point.add(new Point(key,history)); // add every tag to chart
+			result.add(new Point(key,history)); // add all tags to chart
 			
-			/* probability */
-			double prob = counter/total;
-			stat.execute("UPDATE HISTORY SET probability = "+ prob
-					+ " WHERE date = '" + today + "' and tag = '" + key + "'");
 			
-			/* KL divergence */
-			rs = stat.executeQuery("SELECT score FROM RATING where tag = '" + key + "'");
-			double score = 0;
-			if(rs.next()){
-				score = rs.getDouble("score");
-			}
-			if(maxProb != 0){
-				score += prob*Math.log(prob/maxProb);
-				stat.execute("UPDATE RATING SET score = "+score+" WHERE tag = '"+key+"'");
-			}
+			/* update the probability */
+			double prob = counter / total;
+			stat.execute("UPDATE HISTORY SET probability = " + prob + " WHERE date = '" + today + "' and tag = '" + key + "'");
 		}
-		chart.exportData();
+		
+		return result;
 	}
 	
-	/**
-	 * Get coordinates of Top Ten Tag
-	 * @return list of Top Ten Tag
-	 */
-	public ArrayList<Point> getTopTen() throws Exception {
-		PrintWriter pw = new PrintWriter(new FileWriter(
-				"C:\\Users\\gdplabs.intern\\Desktop\\TrendFJB\\prediction\\" + today + ".txt"));
-		pw.println("Hot Tag FJB");
-		pw.println("tag - forum - score - prob; maxProb"); 
-		ArrayList<Point> result = new ArrayList<Point>();
-		rs = stat.executeQuery("SELECT tag,forum,probability,score FROM RATING r, HISTORY h"
-				+ " WHERE h.tag = r.tag and date = '" + today + "' ORDER BY score desc limit 10");
-		int counter = 1;
-		DecimalFormat df = new DecimalFormat("#0.0000000000000"); // format 10 digits decimal
+	public TopTenResult getTopTen() throws Exception {
+		 
+		ArrayList<Point> points = new ArrayList<Point>();
+		ArrayList<Data>  data   = new ArrayList<Data>();
+		
+		rs = stat.executeQuery("SELECT tag,forum,probability,score FROM RATING r, HISTORY h" + " WHERE h.tag = r.tag and date = '" + today + "' ORDER BY score desc limit 10");
+		
 		while(rs.next()){
-			String tag = rs.getString("tag");
+			String tag   = rs.getString("tag");
 			String forum = rs.getString("forum");
-			double prob = rs.getDouble("probability");
+			double prob  = rs.getDouble("probability");
 			double score = rs.getDouble("score");
-			System.out.print(counter+ ". " + tag + " - " + forum + " - " + score + " - " + prob);
-			pw.print(counter+ ". " + tag + " - " + forum + " - " + score + " - " + prob);
 			
 			/* add coordinate for chart */
-			ResultSet temp = stat.executeQuery("SELECT date,counter FROM HISTORY"
-					+ " WHERE tag = '"+ tag + "'");
+			ResultSet temp = stat.executeQuery("SELECT date,counter FROM HISTORY" + " WHERE tag = '"+ tag + "'");
 			ArrayList<History> h = new ArrayList<History>();
 			while(temp.next()){
 				h.add(new History(temp.getString("date"),temp.getInt("counter")));
 			}
-			result.add(new Point(rs.getString("tag"),h));
+			if (h.size() > 0) {
+				points.add(new Point(rs.getString("tag"),h));
+			}
 			
 			/* comparison probability */
-			temp = stat.executeQuery("SELECT MAX(probability) as maxProb FROM HISTORY WHERE tag = '" + tag
-					+ "' and date < '" + today + "'");
-			if(temp.next()){
-				prob = temp.getDouble("maxProb");
-			}
-			String format = df.format(prob);
-			System.out.println("; maxProb=" + format);
-			pw.println("; maxProb=" + format);
-			counter++;
+			temp = stat.executeQuery("SELECT MAX(probability) as maxProb FROM HISTORY WHERE tag = '" + tag + "' and date < '" + today + "'");
+			
+			double max_prob = temp.next() ? temp.getDouble("maxProb") : 0;
+			
+			data.add(new Data(tag,forum,prob,score,max_prob));
 		}
-		System.out.println();
-		pw.close();
-		stat.execute("DELETE FROM HISTORY WHERE date = '" + oldestDay + "'"); // delete oldest day
-		return result;
+		
+		return new TopTenResult(points,data);
 	}
+}
+
+class TopTenResult {
+	ArrayList<Point> points;
+	ArrayList<Data>    data;
 	
-	public void commit(String commit) throws Exception {
-		if(commit.equals("Y")){
-			conn.commit();
-		} else {
-			conn.rollback();
-		}
+	public TopTenResult (ArrayList<Point> points, ArrayList<Data> data) {
+		this.points = points;
+		this.data   = data;
 	}
+}
+
+class Data {
+	public String tag;
+	public String forum;
+	public double prob;
+	public double score;
+	public double max_prob;
 	
-	public void close() throws Exception {
-		stat.close();
-		conn.close();
+	public Data(String tag, String forum, double prob, double score, double max_prob) {
+		this.tag = tag;
+		this.forum = forum;
+		this.prob = prob;
+		this.score = score;
+		this.max_prob = max_prob;
 	}
 }

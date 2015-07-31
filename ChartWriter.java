@@ -5,47 +5,41 @@ import java.util.ArrayList;
 
 public class ChartWriter
 {
-	ArrayList<Point> point;
-	PrintWriter pw;
-	String today; 
-	
-	/**
-	 * For all chart
-	 */
-	public ChartWriter(String today) throws Exception {
-		this.today = today;
-		point = new ArrayList<Point>();
-    	pw = new PrintWriter(new FileWriter(
-				"C:\\Users\\gdplabs.intern\\Desktop\\TrendFJB\\prediction\\" + today + "all.txt"));
-	}
+	private ArrayList<Point> point;
+	private PrintWriter pw;
+	private String today;
 	
 	/**
 	 * For top ten
 	 */
-	public ChartWriter(ArrayList<Point> point, String today) throws Exception {
+	public ChartWriter(String location, ArrayList<Point> point, String today, String suffix) throws Exception {
 		this.today = today;
 		this.point = point;
-		pw = new PrintWriter(new FileWriter(
-				"C:\\Users\\gdplabs.intern\\Desktop\\TrendFJB\\prediction\\" + today + "topTen.txt"));
+		pw = new PrintWriter(new FileWriter(location + "\\" + today + suffix + ".txt"));
 	}
 	
-	public void exportData() {
-    	String[] date = new String[4];
-    	date[3] = today;
+	public void exportData(int size) {
+    	String[] date = new String[size];
+    	
     	DateUtility dateUtility = new DateUtility(today);
-    	for(int i = 2; i >= 0; i--){
-    		date[i] = dateUtility.prevDay(1).toString();
+    	
+    	for(int i = size-1; i >= 0; i--){
+    		date[i] = dateUtility.toString();
+    		dateUtility.prevDay();
     	}
-    	pw.print(date[0]);
-    	for(int i = 1; i < 4; i++){
-    		pw.print("," + date[i]);
+    	
+    	for(int i = 0; i < size; i++){
+    		if (i == 0) pw.print(date[i]);
+    		else pw.print("," + date[i]);
     	}
+    	
     	pw.println();
+    	
     	for(int i = 0; i < point.size(); i++) {
     		Point p = point.get(i);
     		int counter = 0;
     		String result = p.tag;
-    		for(int j = 0; j < 8 && counter < p.history.size(); j++){
+    		for(int j = 0; j < size && counter < p.history.size(); j++){
 				if(p.history.get(counter).date.equals(date[j])){
 					result += "," + p.history.get(counter).counter;
 					counter++;
@@ -55,6 +49,7 @@ public class ChartWriter
 			}
     		pw.println(result);
     	}
+    	
     	pw.close();
     }
 }
