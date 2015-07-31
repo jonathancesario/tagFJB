@@ -76,7 +76,7 @@ public class Database {
 	}
 
 	public double getMaxProb(String key) throws Exception {
-		rs = stat.executeQuery("SELECT MAX(probability) as maxProb FROM HISTORY WHERE tag = '" + key + "'");
+		rs = stat.executeQuery("SELECT MAX(probability) as maxProb FROM HISTORY WHERE tag = '" + key + "'" + " and date < '" + today + "'" );
 
 		return rs.next() ? rs.getDouble("maxProb") : 0;
 	}
@@ -150,13 +150,21 @@ public class Database {
 
 			/* count the probability */
 			double prob = (double) counter / total;
+			
+			if (maxProb < 1e-7) {
+				maxProb = 1.0 / total;
+			}
+			
+			if (prob < 1e-7) {
+				prob = 1.0 / total;
+			}
+			
+//			System.out.println(maxProb + " & " + prob + " = " + prob*Math.log(prob/maxProb));
 
 			/* update KL Divergence */
-			if (maxProb != 0) {
-				score += prob * Math.log(prob / maxProb);
+			score += prob * Math.log(prob / maxProb);
 
-				stat.execute("UPDATE RATING SET score = " + score + " WHERE tag = '" + key + "'");
-			}
+			stat.execute("UPDATE RATING SET score = " + score + " WHERE tag = '" + key + "'");
 		}
 	}
 
@@ -190,7 +198,7 @@ public class Database {
 			
 			
 			/* update the probability */
-			double prob = counter / total;
+			double prob = (double) counter / total;
 			stat.execute("UPDATE HISTORY SET probability = " + prob + " WHERE date = '" + today + "' and tag = '" + key + "'");
 		}
 		

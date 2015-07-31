@@ -7,6 +7,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.StringTokenizer;
 
 public class Main {
 	private static BufferedReader dataReader, inputReader;
@@ -80,10 +81,16 @@ public class Main {
 		/* save list of tags */
 		while (temp != null) {
 			try {
-				String input[] = temp.split(",");
+				StringTokenizer token = new StringTokenizer(temp,",");
 
-				String forum = input[0]; // forum_id
-				String tags = input[1]; // raw tags
+				/* forum_id */
+				String forum = token.nextToken(); 
+				
+				/* raw tags  */
+				String tags = ""; 
+				while (token.hasMoreTokens()) {
+					tags = tags + token.nextToken();
+				}
 
 				/* string (tags) that will be processed */
 				separator.setString(tags);
@@ -119,18 +126,18 @@ public class Main {
 		PrintWriter pw = new PrintWriter(new FileWriter(predict_location + "\\" + date + ".txt"));
 		
 		pw.println("Hot Tag FJB");
-		pw.println("   TAG    -  FORUM   -  SCORE   -   PROB   -  MAXPROB  ");
+		pw.println("NO | TAG | FORUM | SCORE | PROB | MAXPROB");
 		
 		System.out.println("Hot Tag FJB");
-		System.out.println("       NO      -      TAG      -     FORUM     -     SCORE     -      PROB     -     MAXPROB    ");
+		System.out.println("NO | TAG | FORUM | SCORE | PROB | MAXPROB");
 		
 		DecimalFormat df = new DecimalFormat("#0.0000000000000");
 		
 		int i = 0;
 		for (Data data : result.data) {
-			
-			pw.println(++i + " " + data.tag + " " + data.forum + " " + df.format(data.score) +  " " + df.format(data.prob) + " " + df.format(data.max_prob));
-			System.out.println(++i + " " + data.tag + " " + data.forum + " " + df.format(data.score) +  " " + df.format(data.prob) + " " + df.format(data.max_prob));
+			i++;
+			pw.println(i + " | " + data.tag + " | " + data.forum + " | " + df.format(data.score) +  " | " + df.format(data.prob) + " | " + df.format(data.max_prob));
+			System.out.println(i + " | " + data.tag + " | " + data.forum + " | " + df.format(data.score) +  " | " + df.format(data.prob) + " | " + df.format(data.max_prob));
 		}
 		
 		pw.close();
@@ -167,13 +174,13 @@ public class Main {
 				System.out.println("Commit? Y/N");
 				String commit = inputReader.readLine();
 
-				if (commit.equalsIgnoreCase("Y")) database.commit();
-				else database.rollback();
+				if (commit.equalsIgnoreCase("N")) database.rollback();
+				else database.commit();
 			} else {
 				database.commit();
 			}
 			
-			System.out.println(date + ".csv was successfully processed");
+			System.out.println(date + ".csv was successfully processed\n");
 			
 			/* prepare data for next reading */
 			dataReader = new BufferedReader(new FileReader(location + "\\" + date.nextDay() + ".csv"));
@@ -181,5 +188,7 @@ public class Main {
 		}
 
 		inputReader.close();
+		
+		System.out.println("Done..");
 	}
 }
