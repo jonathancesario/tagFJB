@@ -1,0 +1,11 @@
+.idea
+target
+vendor/*
+src/main/resources/datasource/data/*
+src/main/resources/datasource/result/*
+src/main/resources/datasource/summary/*
+!vendor/hsqldb.jar
+!src/main/resources/datasource/data/.gitignore
+!src/main/resources/datasource/result/.gitignore
+!src/main/resources/datasource/summary/.gitignore
+*.iml

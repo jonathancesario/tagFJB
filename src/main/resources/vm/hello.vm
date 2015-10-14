@@ -1,0 +1,105 @@
+<html>
+<head>
+    <title>Kaskus Trending FJB Tags</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+
+<h1 class = "text-center">Automated FJB Trending Tag Classifier</h1>
+
+<ul class="nav nav-tabs">
+    <li class="active"><a href="#visualize" data-toggle="tab">Visualize</a></li>
+    <li class=""><a href="#predict" data-toggle="tab">Initialize</a></li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade active in col-lg-12 center" id="visualize">
+
+        <a id="canvas-btn-view" class = "btn btn-primary pull-right hidden"> View Details </a>
+        <a id="canvas-btn-reset" class = "btn btn-primary pull-right hidden"> Reset </a>
+        <canvas id="canvas" class ="hidden"></canvas>
+
+        <div class="modal fade" id="canvas-modal">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <h4 class="modal-title" id="modal-title">Trending Result</h4>
+                    </div>
+                    <div class="modal-body">
+                        <table class="table table-striped table-condensed">
+                            <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Tag</th>
+                                <th>Forum-Id</th>
+                                <th>Score</th>
+                                <th>Probability</th>
+                                <th>Maximum Probability</th>
+                                <th>Action</th>
+                            </tr>
+                            </thead>
+                            <tbody id="result-table">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <label for="days" class="control-label">Search by Tag Name</label>
+                        <input type="text" class="input-sm form-control validate[required]" name="tag" id="tag_search"
+                               placeholder="Search by tag name">
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-visualize-tag">Search</button>
+                        <button type="button" class="btn btn-danger btn-sm" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <table class="table table-striped table-condensed" id = "visualization-table">
+            <h2>Data List</h2>
+            <a href="#" id="btn-predict" class="btn btn-success pull-right">Get New Day</a>
+            <a href="#" id="btn-delete" class="btn btn-danger pull-right">Delete All</a>
+            <thead>
+            <tr>
+                <th>No</th>
+                <th>Data</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody id="visualize-table">
+                #foreach( $date in $dates )
+                <tr id="visualize-row-$date">
+                    <td>$velocityCount</td>
+                    <td>$date</td>
+                    <td><a data-id="$date" class="btn btn-xs btn-primary btn-visualize" href="#canvas">Visualize</a></td>
+                </tr>
+                #end
+            </tbody>
+        </table>
+    </div>
+
+    <div class="col-lg-10 center tab-pane fade" id="predict">
+        <h2> Initialize New Data</h2>
+
+        <div>
+            <br>
+            <label for="days" class="control-label">Days</label>
+            <input type="number" class="input-sm form-control validate[required]" name="days" id="init_days"
+                   placeholder="days"> <br>
+
+            <label for="date" class="control-label">Start Date (yyyy-MM-dd)</label>
+            <input type="text" class="input-sm form-control validate[required]" name="date" id="init_date"
+                   placeholder="date"> <br>
+
+            <a href="#" id="btn-init" class="btn btn-success pull-right">Initialize</a>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
+
+<script src="js/jquery.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/Chart.min.js"></script>
+<script src="js/custom.js"></script>
